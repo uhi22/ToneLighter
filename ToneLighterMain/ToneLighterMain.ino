@@ -1,7 +1,7 @@
 /*
-  Lautometer
+  ToneLigher Main
 
-  Liest Mikrofonsignal analog ein, bewertet die Lautstärke und steuert LEDs an.
+  Reads audio signal via a microphone, evaluates the volume and controls an LED stripe.
 
   The circuit:
   - A0 Analoges Mikrofonsignal (nach Verstärkung). Der Ruhepegel liegt irgendwo zwischen 2 und 4 Volt.
@@ -16,21 +16,21 @@
 
 #include <Adafruit_NeoPixel.h>
 
-/* Gleichrichter und Glättung in Hardware, d.h. am AD-Wandler liegt eine Gleichspannung,
- *  die mit größerer Lautstärke größer wird.
+/* Rectifier and smooting in hardware. This means, on the ADC there is a DC voltage, which
+ *  is higher with increasing volume.
  */
 #define MIT_HARDWARE_GLEICHRICHTER
 
 int microfonPin = A0;    // select the input pin for audio signal
 int ledPin = 13;      // select the pin for the LED
 int analogValue = 0;  // variable to store the value coming from the sensor
-#define PIN_LED_WEISS 5
 #define PIN_LEDSTRIPE_WS2812   6
-#define PIN_LED_GRUEN 7
-#define PIN_LED_GELB 8
+
+#define PIN_GAIN_1 8 /* for switching the amplifier gain */
+#define PIN_GAIN_2 9 /* for switching the amplifier gain */
 
 // How many NeoPixels are attached to the Arduino?
-#define LED_NEOPIXEL_COUNT 60 // 30 // 90
+#define LED_NEOPIXEL_COUNT 20 // 30 // 90
 
 uint32_t arrTropfen[LED_NEOPIXEL_COUNT];
 
@@ -41,11 +41,10 @@ Adafruit_NeoPixel strip(LED_NEOPIXEL_COUNT, PIN_LEDSTRIPE_WS2812, NEO_RGB + NEO_
 void setup() {
   // declare the ledPin as an OUTPUT:
   pinMode(ledPin, OUTPUT);
-  pinMode(PIN_LED_WEISS, OUTPUT);
-  pinMode(PIN_LED_GRUEN, OUTPUT);
-  pinMode(PIN_LED_GELB, OUTPUT);
+  pinMode(PIN_GAIN_1, INPUT); /* switching the gain pin to input produces the highest amplifier gain */
+  pinMode(PIN_GAIN_2, INPUT);
   Serial.begin(115200);
-  Serial.println(F("Starte..."));
+  Serial.println(F("Starting..."));
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(250); // Set BRIGHTNESS (max = 255)  
@@ -60,7 +59,7 @@ void setup() {
 
 #define MODE_MAX 5
 #define MODE_AUTO_OFF 99
-int mode=MODE_FILTER_DEBUG;
+int mode=MODE_TROPFEN;
 uint8_t modeAuto = MODE_AUTO_OFF;
 
 int modedivider=0;
@@ -315,10 +314,6 @@ void loop() {
   
   if (amplitude_pixel>filteredMax) filteredMax=amplitude_pixel;
   
-  if (amplitude_pixel>10) {  digitalWrite(PIN_LED_GRUEN, 1);  } else {  digitalWrite(PIN_LED_GRUEN, 0);   }
-  if (amplitude_pixel>20) {  digitalWrite(PIN_LED_GELB, 1);  } else {  digitalWrite(PIN_LED_GELB, 0);   }
-  if (amplitude_pixel>40) {  digitalWrite(PIN_LED_WEISS, 1);  } else {  digitalWrite(PIN_LED_WEISS, 0);   }
-
   if (nTropenSperre==0) {
     if (rel_amplitude_1023>200) {
       if (rel_amplitude_1023>500) { nTropenSperre=2; arrTropfen[0]=strip.Color(0, 20,0); /* grün */ }
